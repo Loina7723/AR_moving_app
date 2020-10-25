@@ -41,6 +41,7 @@
                 android:layout_height="100dp"
                 android:background="#F6EC8E"
                 android:padding="10dp"
+                android:visibility="gone"
                 app:srcCompat="@android:drawable/alert_light_frame" />
         </RelativeLayout>
 
