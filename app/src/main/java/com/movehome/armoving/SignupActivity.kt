@@ -8,6 +8,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import okhttp3.*
+import org.json.JSONObject
+import java.io.IOException
 
 class SignupActivity : AppCompatActivity() {
 
@@ -52,21 +55,68 @@ class SignupActivity : AppCompatActivity() {
 //        val password = _passwordText!!.text.toString()
 //        val reEnterPassword = _reEnterPasswordText!!.text.toString()
 
-        android.os.Handler().postDelayed(
-            {
-                // On complete call either onSignupSuccess or onSignupFailed
-                // depending on success
-                onSignupSuccess()
-//                onSignupFailed();
-            }, 3000)
+        val body = FormBody.Builder()
+            .add("if_elev", "0")
+            .add("name", email)
+            .add("email", email)
+            .add("password", _passwordText!!.text.toString())
+            .add("phone", _mobileText!!.text.toString())
+            .build()
+
+        val server_url = "http://140.117.71.79:8000/api"
+        val request = Request.Builder()
+            .url(server_url+"/register")
+            .post(body)
+            .build()
+
+        val okHttpClient = OkHttpClient()
+        val call: Call = okHttpClient.newCall(request)
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace();
+                Log.d(TAG, "request fail: "+e.message)
+                runOnUiThread (object : Runnable {
+                    override fun run() {
+                        Toast.makeText(this@SignupActivity, "connect fail", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseData = response.body?.string()
+//                Log.i(TAG, "responseData: "+responseData)
+
+                val responseObj = JSONObject(responseData)
+                Log.i(TAG, "responseObj: "+responseObj)
+
+                if(responseObj.getBoolean("success")){
+                    val user = responseObj.getJSONObject("user")
+                    Log.i(TAG, "user: "+user)
+
+                    onSignupSuccess()
+                }
+                else{
+                    onSignupFailed();
+                    Log.i(TAG, "register fail")
+                    runOnUiThread (object : Runnable {
+                        override fun run() {
+                            Toast.makeText(this@SignupActivity, "register fail", Toast.LENGTH_SHORT).show()
+                        }
+                    })
+                }
+            }
+        });
+
+
     }
 
 
     fun onSignupSuccess() {
-        _signupButton!!.isEnabled = true
+        runOnUiThread({ _signupButton!!.isEnabled = true })
 //        setResult(Activity.RESULT_OK, null)
 //        finish()
-        startActivity(Intent(this, InfoActivity::class.java))
+//        startActivity(Intent(this, InfoActivity::class.java))
+        startActivity(Intent(this, StartActivity::class.java))
         finish()
     }
 

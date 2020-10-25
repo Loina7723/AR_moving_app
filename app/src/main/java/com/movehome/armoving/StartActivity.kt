@@ -4,62 +4,82 @@ import android.content.Intent
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 
 class StartActivity : AppCompatActivity() {
+    private var items: ArrayList<CardListData> = ArrayList()
+    private var etMessage : EditText? = null
+
+    private val TAG = StartActivity::class.java.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_start)
-        val button = findViewById<Button>(R.id.btn_submit)
-        val BTN_living = findViewById<Button>(R.id.btn_living)
-        val BTN_kitchen = findViewById<Button>(R.id.btn_kitchen)
-        val BTN_bath = findViewById<Button>(R.id.btn_bath)
-        val BTN_reading = findViewById<Button>(R.id.btn_reading)
-        val etMessage = findViewById(R.id.custom) as EditText
+        val livingBtn = findViewById<Button>(R.id.living_btn_start)
+        val kitchenBtn = findViewById<Button>(R.id.kitchen_btn_start)
+        val bathBtn = findViewById<Button>(R.id.bath_btn_start)
+        val readingBtn = findViewById<Button>(R.id.reading_btn_start)
+        val addButton = findViewById<Button>(R.id.submit_btn_start)
+        etMessage = findViewById(R.id.addRoom_et_start)
 
-        BTN_living.setOnClickListener {
-            val editText = findViewById(R.id.custom) as EditText
-            editText.setText("客廳", TextView.BufferType.EDITABLE)
-            editText.setTextColor(Color.BLACK)
+        val data = intent.extras
+        if(data != null) {
+            items = data.getParcelableArrayList<CardListData>("items")!!
+            for(item in items){
+                Log.d(TAG, "tab: "+item.title)
+            }
         }
 
-        BTN_kitchen.setOnClickListener {
-            val editText = findViewById(R.id.custom) as EditText
-            editText.setText("廚房", TextView.BufferType.EDITABLE)
-            editText.setTextColor(Color.BLACK)
-        }
+        setRoomBtn(livingBtn)
+        setRoomBtn(kitchenBtn)
+        setRoomBtn(bathBtn)
+        setRoomBtn(readingBtn)
 
-        BTN_bath.setOnClickListener {
-            val editText = findViewById(R.id.custom) as EditText
-            editText.setText("浴室", TextView.BufferType.EDITABLE)
-            editText.setTextColor(Color.BLACK)
-        }
-
-        BTN_reading.setOnClickListener {
-            val editText = findViewById(R.id.custom) as EditText
-            editText.setText("書房", TextView.BufferType.EDITABLE)
-            editText.setTextColor(Color.BLACK)
-        }
-        button.setOnClickListener{
-            //read value from EditText to a String variable
-            val msg: String = etMessage.text.toString()
-
-            //check if the EditText have values or not
-            if(msg.trim().length>0) {
-                //passing value to the next page
-                val intent = Intent(this, MainActivity::class.java)
-                intent.putExtra("Page", msg)
-                startActivity(intent)
+        addButton.setOnClickListener{
+            val newRoom: String = etMessage?.text.toString()
+            if(newRoom.trim().isNotEmpty()) {
+                if(isTabExist(newRoom)){
+                    Toast.makeText(this, "已存在此房間，請輸入其他房間名字", Toast.LENGTH_LONG).show()
+                }
+                else{
+                    items.add(CardListData(newRoom, ArrayList()))
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    intent.putExtra("items", items)
+                    intent.putExtra("position", items.size-1)
+//                    intent.putExtra("Page", newRoom)
+                    startActivity(intent)
+                }
             }else{
                 Toast.makeText(applicationContext, "請輸入所在位置! ", Toast.LENGTH_SHORT).show()
             }
         }
+    }
 
+    private fun setRoomBtn(room: Button){
+        if(isTabExist(room.text.toString())){
+            Log.d(TAG, room.text.toString()+" exist")
+            room.setBackgroundResource(R.drawable.btn_round_corner_gray)
+            room.setTextColor(Color.parseColor("#D5D5D5"))
+            return
+        }
+        room.setOnClickListener { setRoomClick(room.text.toString()) }
+    }
 
+    private fun setRoomClick(text: String) {
+        Log.d(TAG, "$text click")
+        etMessage?.setText(text, TextView.BufferType.EDITABLE)
+        etMessage?.setTextColor(Color.BLACK)
+    }
+
+    private fun isTabExist(tabName: String): Boolean {
+        for(item in items)
+            if(item.title.equals(tabName))
+                return true
+        return false
     }
 }

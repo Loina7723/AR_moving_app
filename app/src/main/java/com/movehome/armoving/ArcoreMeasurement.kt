@@ -3,6 +3,7 @@ package com.movehome.armoving
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import com.movehome.armoving.Measurement
@@ -17,17 +18,27 @@ class ArcoreMeasurement : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_arcore_measurement)
 
+        val data = intent.extras
+        val items: ArrayList<CardListData> = data?.getParcelableArrayList<CardListData>("items")!!
+        val position = data.getInt("position")
+        val item = items[position]
+        Log.d(TAG, "item("+position+").data("+item.data.size+")")
+
         val buttonArray = resources
             .getStringArray(R.array.arcore_measurement_buttons)
 
         buttonArray.map{it->
             buttonArrayList.add(it)
         }
+
         toMeasurement = findViewById(R.id.to_measurement)
         toMeasurement.text = buttonArrayList[0]
+
         toMeasurement.setOnClickListener(object: View.OnClickListener {
             override fun onClick(v: View?) {
                 val intent = Intent(application, Measurement::class.java)
+                intent.putExtra("items", items)
+                intent.putExtra("position", position)
                 startActivity(intent)
             }
         })

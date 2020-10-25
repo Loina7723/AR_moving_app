@@ -2,19 +2,25 @@ package com.movehome.armoving
 
 import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
+import android.os.*
 import android.util.Log
-import android.view.Gravity
-import android.view.MotionEvent
-import android.view.View
+import android.view.*
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.RequiresApi
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.ar.core.*
 import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.FrameTime
@@ -24,8 +30,13 @@ import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.lang.Exception
+import java.util.*
+import kotlin.collections.ArrayList
 import com.google.ar.sceneform.rendering.Color as arColor
-import java.util.Objects
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -74,23 +85,56 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
     private lateinit var clearButton: Button
 
+    var imageView: ImageView? = null
+
+
+    var data: Bundle? = null
+    var items: ArrayList<CardListData>? = null
+    var position: Int? = null
+    var item: CardListData? = null
+    var myDir: String? = null
+    var imageFloderPath: String? = null
+    var filepath: String? = null
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
+
+        data = intent.extras
+        items = data?.getParcelableArrayList<CardListData>("items")!!
+        position = data?.getInt("position")
+        item = items!![position!!]
+        Log.d(TAG, "item("+position+").data("+ item!!.data.size+")")
+
+        myDir = this.externalCacheDir?.path.toString()
+        imageFloderPath = "/image/"+ item!!.title
+        createDir()
+
         if (!checkIsSupportedDeviceOrFinish(this)) {
-            Toast.makeText(applicationContext, "Device not supported", Toast.LENGTH_LONG)
-                .show()
+            Toast.makeText(applicationContext, "Device not supported", Toast.LENGTH_LONG).show()
         }
 
         setContentView(R.layout.activity_measurement)
+        arFragment = supportFragmentManager.findFragmentById(R.id.sceneform_fragment) as ArFragment?
+
+
         val button = findViewById<Button>(R.id.doneButton)
         button.setOnClickListener {
-            System.exit(0)
+            takePhoto()
+
+            item!!.data.add(CardData(filepath, "new card name", "new card"))
+            Log.d(TAG, "item.data("+ item!!.data.size+"): "+item!!.data[item!!.data.size-1])
+
+            backToMain()
         }
+
+        imageView = findViewById<ImageView>(R.id.imageView_test)
+        imageView!!.setOnClickListener(View.OnClickListener { takePhoto() })
+
+
         val distanceModeArray = resources.getStringArray(R.array.distance_mode)
-        distanceModeArray.map{it->
-            distanceModeArrayList.add(it)
-        }
-        arFragment = supportFragmentManager.findFragmentById(R.id.sceneform_fragment) as ArFragment?
+        distanceModeArray.map{it-> distanceModeArrayList.add(it) }
         distanceModeTextView = findViewById(R.id.distance_view)
         multipleDistanceTableLayout = findViewById(R.id.multiple_distance_table)
 
@@ -100,6 +144,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         initArrowView()
         initRenderable()
         clearButton()
+
 
         arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
             if (cubeRenderable == null || distanceCardViewRenderable == null) return@setOnTapArPlaneListener
@@ -127,6 +172,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun initDistanceTable(){
+        Log.d(TAG, "initDistanceTable")
         for (i in 0 until Constants.maxNumMultiplePoints+1){
             val tableRow = TableRow(this)
             multipleDistanceTableLayout.addView(tableRow,
@@ -164,6 +210,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun initArrowView(){
+        Log.d(TAG, "initArrowView")
         arrow1UpLinearLayout = LinearLayout(this)
         arrow1UpLinearLayout.orientation = LinearLayout.VERTICAL
         arrow1UpLinearLayout.gravity = Gravity.CENTER
@@ -202,6 +249,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun initRenderable() {
+        Log.d(TAG, "initRenderable")
         MaterialFactory.makeTransparentWithColor(
             this,
             arColor(Color.RED))
@@ -215,7 +263,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("1. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -232,7 +280,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("2. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -249,7 +297,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("3. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -266,7 +314,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("4. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -283,7 +331,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("5. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -300,7 +348,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("6. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -308,6 +356,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun configureSpinner(){
+        Log.d(TAG, "configureSpinner")
         distanceMode = distanceModeArrayList[0]
         distanceModeSpinner = findViewById(R.id.distance_mode_spinner)
         val distanceModeAdapter = ArrayAdapter(
@@ -349,10 +398,12 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun setMode(){
+        Log.d(TAG, "setMode")
         distanceModeTextView!!.text = distanceMode
     }
 
     private fun clearButton(){
+        Log.d(TAG, "clearButton")
         clearButton = findViewById(R.id.clearButton)
         clearButton.setOnClickListener(object: View.OnClickListener {
             override fun onClick(v: View?) {
@@ -362,6 +413,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun clearAllAnchors(){
+        Log.d(TAG, "clearAllAnchors")
         placedAnchors.clear()
         for (anchorNode in placedAnchorNodes){
             arFragment!!.arSceneView.scene.removeChild(anchorNode)
@@ -389,6 +441,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun tapDistanceFromGround(hitResult: HitResult){
+        Log.d(TAG, "tapDistanceFromGround")
         clearAllAnchors()
         val anchor = hitResult.createAnchor()
         placedAnchors.add(anchor)
@@ -499,6 +552,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
     private fun placeAnchor(hitResult: HitResult,
                             renderable: Renderable){
+        Log.d(TAG, "placeAnchor")
         val anchor = hitResult.createAnchor()
         placedAnchors.add(anchor)
 
@@ -524,6 +578,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
 
     private fun tapDistanceOf2Points(hitResult: HitResult){
+        Log.d(TAG, "tapDistanceOf2Points")
         if (placedAnchorNodes.size == 0){
             placeAnchor(hitResult, cubeRenderable!!)
             //If you have 0 anchor, place one.
@@ -550,6 +605,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     private fun placeMidAnchor(pose: Pose,
                                renderable: Renderable,
                                between: Array<Int> = arrayOf(0,1)){
+        Log.d(TAG, "placeMidAnchor")
         val midKey = "${between[0]}_${between[1]}"
         val anchor = arFragment!!.arSceneView.session!!.createAnchor(pose)
         midAnchors.put(midKey, anchor)
@@ -573,6 +629,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun tapDistanceOfMultiplePoints(hitResult: HitResult){
+        Log.d(TAG, "tapDistanceOfMultiplePoints")
         if (placedAnchorNodes.size >= Constants.maxNumMultiplePoints){
             clearAllAnchors()
         }
@@ -589,7 +646,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
-                builder.setMessage(it.message).setTitle("Error")
+                builder.setMessage("7. "+it.message).setTitle("Error")
                 val dialog = builder.create()
                 dialog.show()
                 return@exceptionally null
@@ -599,6 +656,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
     @SuppressLint("SetTextI18n")
     override fun onUpdate(frameTime: FrameTime) {
+        Log.d(TAG, "onUpdate")
         when(distanceMode) {
             distanceModeArrayList[0] -> {
                 measureDistanceFromCamera()
@@ -619,6 +677,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun measureDistanceFromGround(){
+        Log.d(TAG, "measureDistanceFromGround")
         if (fromGroundNodes.size == 0) return
         for (node in fromGroundNodes){
             val textView = (distanceCardViewRenderable!!.view as LinearLayout)
@@ -629,6 +688,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun measureDistanceFromCamera(){
+        Log.d(TAG, "measureDistanceFromCamera")
         val frame = arFragment!!.arSceneView.arFrame
         if (placedAnchorNodes.size >= 1) {
             val distanceMeter = calculateDistance(
@@ -639,6 +699,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun measureDistanceOf2Points(){
+        Log.d(TAG, "measureDistanceOf2Points")
         if (placedAnchorNodes.size == 2) {
             val distanceMeter = calculateDistance(
                 placedAnchorNodes[0].worldPosition,
@@ -648,6 +709,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun measureDistanceOf2Points(distanceMeter: Float){
+        Log.d(TAG, "measureDistanceOf2Points(distanceMeter)")
         val distanceTextCM = makeDistanceTextWithCM(distanceMeter)
         val textView = (distanceCardViewRenderable!!.view as LinearLayout)
             .findViewById<TextView>(R.id.distanceCard)
@@ -656,6 +718,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun measureMultipleDistances(){
+        Log.d(TAG, "measureMultipleDistances")
         if (placedAnchorNodes.size > 1){
             for (i in 0 until placedAnchorNodes.size){
                 for (j in i+1 until placedAnchorNodes.size){
@@ -672,16 +735,19 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun makeDistanceTextWithCM(distanceMeter: Float): String{
+        Log.d(TAG, "makeDistanceTextWithCM")
         val distanceCM = changeUnit(distanceMeter, "cm")
         val distanceCMFloor = "%.2f".format(distanceCM)
         return "${distanceCMFloor} cm"
     }
 
     private fun calculateDistance(x: Float, y: Float, z: Float): Float{
+        Log.d(TAG, "calculateDistance")
         return sqrt(x.pow(2) + y.pow(2) + z.pow(2))
     }
 
     private fun calculateDistance(objectPose0: Pose, objectPose1: Pose): Float{
+        Log.d(TAG, "calculateDistance(objectPose: Pose)")
         return calculateDistance(
             objectPose0.tx() - objectPose1.tx(),
             objectPose0.ty() - objectPose1.ty(),
@@ -690,6 +756,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
 
     private fun calculateDistance(objectPose0: Vector3, objectPose1: Pose): Float{
+        Log.d(TAG, "calculateDistance(objectPose: Vector3, Pose)")
         return calculateDistance(
             objectPose0.x - objectPose1.tx(),
             objectPose0.y - objectPose1.ty(),
@@ -698,6 +765,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun calculateDistance(objectPose0: Vector3, objectPose1: Vector3): Float{
+        Log.d(TAG, "calculateDistance(objectPose: Vector3)")
         return calculateDistance(
             objectPose0.x - objectPose1.x,
             objectPose0.y - objectPose1.y,
@@ -706,6 +774,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun changeUnit(distanceMeter: Float, unit: String): Float{
+        Log.d(TAG, "changeUnit")
         return when(unit){
             "cm" -> distanceMeter * 100
             "mm" -> distanceMeter * 1000
@@ -714,6 +783,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     private fun toastMode(){
+        Log.d(TAG, "toastMode")
         Toast.makeText(this@Measurement,
             when(distanceMode){
                 distanceModeArrayList[0] -> "Find plane and tap somewhere"
@@ -728,6 +798,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
 
     private fun checkIsSupportedDeviceOrFinish(activity: Activity): Boolean {
+        Log.d(TAG, "checkIsSupportedDeviceOrFinish")
         val openGlVersionString =
             (Objects.requireNonNull(activity
                 .getSystemService(Context.ACTIVITY_SERVICE)) as ActivityManager)
@@ -743,5 +814,57 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             return false
         }
         return true
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun takePhoto() {
+        filepath = generateFilename()
+        val view = arFragment!!.arSceneView
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val handlerThread: HandlerThread = HandlerThread("PixelCopier")
+        handlerThread.start()
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            PixelCopy.request(view, bitmap, { copyResult: Int ->
+                runOnUiThread{ imageView!!.setImageBitmap(bitmap) }
+                saveBitmapToDisk(bitmap, filepath!!)
+                handlerThread.quitSafely()
+            }, Handler(handlerThread.looper))
+        }
+    }
+
+    private fun createDir() {
+        val imageFloder = File(myDir+imageFloderPath)
+        if(!imageFloder.isDirectory) imageFloder.mkdirs()
+    }
+
+    private fun generateFilename(): String {
+        val filename = "/"+item!!.title+"_"+item!!.data.size+".jpg"
+        return myDir+imageFloderPath+filename
+    }
+
+    private fun saveBitmapToDisk(bitmap: Bitmap, filepath: String) {
+        val file = File(filepath)
+        try {
+            Log.d(TAG, "file path: "+ filepath)
+
+            if(file.isFile) file.delete()
+
+            val bStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bStream)
+            val byteArray = bStream.toByteArray()
+            file.writeBytes(byteArray)
+        } catch (e: Exception) {
+            Log.e(TAG, "create new file", e)
+        }
+    }
+
+    private fun backToMain() {
+        Log.d(TAG, "backToMain")
+        val intent = Intent(this, MainActivity::class.java)
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        intent.putExtra("items", items)
+        intent.putExtra("position", position)
+        startActivity(intent)
     }
 }
