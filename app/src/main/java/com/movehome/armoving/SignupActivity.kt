@@ -56,7 +56,6 @@ class SignupActivity : AppCompatActivity() {
 //        val reEnterPassword = _reEnterPasswordText!!.text.toString()
 
         val body = FormBody.Builder()
-            .add("if_elev", "0")
             .add("name", email)
             .add("email", email)
             .add("password", _passwordText!!.text.toString())

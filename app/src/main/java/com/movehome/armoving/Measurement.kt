@@ -357,7 +357,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
     private fun configureSpinner(){
         Log.d(TAG, "configureSpinner")
-        distanceMode = distanceModeArrayList[0]
+        distanceMode = distanceModeArrayList[2]
         distanceModeSpinner = findViewById(R.id.distance_mode_spinner)
         val distanceModeAdapter = ArrayAdapter(
             applicationContext,
@@ -365,7 +365,9 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             distanceModeArrayList
         )
         distanceModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
         distanceModeSpinner.adapter = distanceModeAdapter
+        distanceModeSpinner.setSelection(2)
         distanceModeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
             override fun onItemSelected(parent: AdapterView<*>?,
                                         view: View?,
@@ -630,7 +632,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
     private fun tapDistanceOfMultiplePoints(hitResult: HitResult){
         Log.d(TAG, "tapDistanceOfMultiplePoints")
-        if (placedAnchorNodes.size >= Constants.maxNumMultiplePoints){
+        if (placedAnchorNodes.size >= 2){ //Constants.maxNumMultiplePoints
             clearAllAnchors()
         }
         ViewRenderable
@@ -640,9 +642,22 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             .thenAccept{
                 it.isShadowReceiver = false
                 it.isShadowCaster = false
-                pointTextView = it.getView() as TextView
-                pointTextView.setText(placedAnchors.size.toString())
-                placeAnchor(hitResult, it)
+//                pointTextView = it.getView() as TextView
+//                pointTextView.setText(placedAnchors.size.toString())
+//                placeAnchor(hitResult, it)
+                placeAnchor(hitResult, cubeRenderable!!)
+
+                if (placedAnchorNodes.size >= 2) {
+                    val midPosition = floatArrayOf(
+                        (placedAnchorNodes[0].worldPosition.x + placedAnchorNodes[1].worldPosition.x) / 2,
+                        (placedAnchorNodes[0].worldPosition.y + placedAnchorNodes[1].worldPosition.y) / 2,
+                        (placedAnchorNodes[0].worldPosition.z + placedAnchorNodes[1].worldPosition.z) / 2
+                    )
+                    val quaternion = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
+                    val pose = Pose(midPosition, quaternion)
+
+                    placeMidAnchor(pose, distanceCardViewRenderable!!)
+                }
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
