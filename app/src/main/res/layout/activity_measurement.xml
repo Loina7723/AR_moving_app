@@ -23,6 +23,7 @@
             android:background="#D8B0B0"
             android:visibility="visible">
 
+
             <fragment
                 android:id="@+id/sceneform_fragment"
                 android:name="com.google.ar.sceneform.ux.ArFragment"
@@ -33,7 +34,6 @@
                 android:layout_marginEnd="8dp"
                 android:layout_marginBottom="8dp"
                 tools:layout="@layout/activity_thanks" />
-
 
             <ImageView
                 android:id="@+id/imageView_test"
@@ -54,20 +54,23 @@
             android:gravity="center"
             android:padding="8dp"
             android:textColor="@android:color/white"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:visibility="invisible" />
 
         <TableLayout
             android:id="@+id/multiple_distance_table"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.0" />
+            android:layout_weight="0.0"
+            android:visibility="gone" />
 
         <Spinner
             android:id="@+id/distance_mode_spinner"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="0.5"
-            android:spinnerMode="dialog" />
+            android:spinnerMode="dialog"
+            android:visibility="invisible" />
 
         <Button
             android:id="@+id/doneButton"

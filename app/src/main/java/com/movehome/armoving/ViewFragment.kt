@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.movehome.armoving.model.CardData
 import kotlinx.android.synthetic.main.cards_page.view.*
 
 class ViewFragment(val mContext: Context, val data: ArrayList<CardData>) : Fragment() {

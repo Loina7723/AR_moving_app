@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
+import com.movehome.armoving.model.CardData
 import kotlinx.android.synthetic.main.card_item.view.*
 import java.io.File
 
@@ -28,7 +29,7 @@ class RecyclerAdapter(private val mDataList: ArrayList<CardData>) : RecyclerView
             holder.img.setImageBitmap(bmp)
         }
         holder.name.text = mDataList[position].card_name
-        holder.volume.text = mDataList[position].card_volume
+        holder.volume.text = mDataList[position].card_volume + " cm²"
         holder.volumeEdit.text = Editable.Factory.getInstance().newEditable(mDataList[position].card_volume)
         holder.deleteBtn.setOnClickListener{
             mDataList.removeAt(position)

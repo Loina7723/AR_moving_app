@@ -22,9 +22,8 @@
             android:id="@+id/img_CI"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#7C2B2B"
-            tools:srcCompat="@tools:sample/avatars"
-            android:contentDescription="ar picture" />
+            android:contentDescription="ar picture"
+            tools:srcCompat="@tools:sample/avatars" />
 
         <TextView
             android:id="@+id/cardName_text_CI"
@@ -47,7 +46,7 @@
                 android:textColor="#E0F2F1"
                 android:textSize="16sp"
                 android:textStyle="italic"
-                android:visibility="gone"
+                android:visibility="visible"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/content_text_CI"
                 app:layout_constraintStart_toStartOf="parent"
@@ -60,6 +59,7 @@
                 android:layout_marginEnd="16dp"
                 android:inputType="text"
                 android:text="volume"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/content_text_CI"
                 app:layout_constraintStart_toStartOf="parent"
@@ -74,9 +74,10 @@
                 android:textColor="#E0F2F1"
                 android:textSize="16sp"
                 android:textStyle="italic"
+                android:visibility="invisible"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/delete_btn_CI"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <Button

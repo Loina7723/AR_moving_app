@@ -20,10 +20,10 @@
 
         <activity android:name=".MainActivity" />
         <activity android:name=".ThanksActivity" />
-        <activity android:name=".InfoActivity" />
+        <activity android:name=".SignupActivity" />
         <activity android:name=".IntroActivity" />
 <!--        <activity android:name=".FurnitureActivity" />-->
-        <activity android:name=".SignupActivity"/>
+        <activity android:name=".InfoActivity"/>
         <activity android:name=".Measurement"/>
         <activity
             android:name=".ArcoreMeasurement"

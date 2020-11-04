@@ -19,8 +19,10 @@ class IntroActivity : AppCompatActivity() {
 
             _IntroButton!!.isEnabled = true
 
-            startActivity(Intent(this, SignupActivity::class.java))
-//            finish()
+            val bundle: Bundle = intent.extras!!
+            val intent = Intent(this, SignupActivity::class.java)
+            intent.putExtras(bundle)
+            startActivity(intent)
         }
     }
 }

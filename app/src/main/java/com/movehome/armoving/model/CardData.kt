@@ -1,4 +1,4 @@
-package com.movehome.armoving
+package com.movehome.armoving.model
 
 import android.os.Parcelable
 import kotlinx.android.parcel.Parcelize

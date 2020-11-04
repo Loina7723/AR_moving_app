@@ -8,19 +8,12 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Rect
 import android.os.*
 import android.util.Log
 import android.view.*
 import android.widget.*
-import androidx.activity.OnBackPressedCallback
 import androidx.annotation.RequiresApi
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
-import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.ar.core.*
 import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.FrameTime
@@ -30,9 +23,10 @@ import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
+import com.movehome.armoving.model.CardData
+import com.movehome.armoving.model.CardListData
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
 import java.lang.Exception
 import java.util.*
 import kotlin.collections.ArrayList
@@ -101,6 +95,8 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
 
+        Constants.maxNumMultiplePoints = 4;
+
         data = intent.extras
         items = data?.getParcelableArrayList<CardListData>("items")!!
         position = data?.getInt("position")
@@ -123,7 +119,16 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         button.setOnClickListener {
             takePhoto()
 
-            item!!.data.add(CardData(filepath, "new card name", "new card"))
+            var volume: Float = 1f
+            for (i in 0..placedAnchorNodes.size-2){
+                val j = i+1
+                Log.d(TAG, "volume("+volume+") * "+multipleDistances[i][j]!!.text.toString())
+                volume = volume * multipleDistances[i][j]!!.text.toString().toFloat()
+            }
+            Log.d(TAG, "volume = "+volume)
+
+
+            item!!.data.add(CardData(filepath, item!!.title+" "+item!!.data.size, volume.toString()))
             Log.d(TAG, "item.data("+ item!!.data.size+"): "+item!!.data[item!!.data.size-1])
 
             backToMain()
@@ -144,6 +149,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         initArrowView()
         initRenderable()
         clearButton()
+        initDistanceTable()
 
 
         arFragment!!.setOnTapArPlaneListener { hitResult: HitResult, plane: Plane?, motionEvent: MotionEvent? ->
@@ -171,45 +177,36 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         }
     }
 
-    private fun initDistanceTable(){
+    private fun initDistanceTable(){ //給多點的距離表
         Log.d(TAG, "initDistanceTable")
         for (i in 0 until Constants.maxNumMultiplePoints+1){
-            val tableRow = TableRow(this)
-            multipleDistanceTableLayout.addView(tableRow,
-                multipleDistanceTableLayout.width,
-                Constants.multipleDistanceTableHeight / (Constants.maxNumMultiplePoints + 1))
+            val tableRow = TableRow(this) //新的一行
+            multipleDistanceTableLayout.addView(tableRow, multipleDistanceTableLayout.width, Constants.multipleDistanceTableHeight / (Constants.maxNumMultiplePoints + 1))
             for (j in 0 until Constants.maxNumMultiplePoints+1){
                 val textView = TextView(this)
                 textView.setTextColor(Color.WHITE)
                 if (i==0){
-                    if (j==0){
-                        textView.setText("cm")
-                    }
-                    else{
-                        textView.setText((j-1).toString())
-                    }
+                    if (j==0) textView.setText("cm")
+                    else textView.setText((j-1).toString()) //上方的點編號
                 }
                 else{
-                    if (j==0){
-                        textView.setText((i-1).toString())
-                    }
-                    else if(i==j){
+                    if (j==0) textView.setText((i-1).toString()) //左側的點編號
+                    else if(i==j){ //對角線，不顯示數字
                         textView.setText("-")
                         multipleDistances[i-1][j-1] = textView
                     }
-                    else{
+                    else{ //初始化數字
                         textView.setText(initCM)
                         multipleDistances[i-1][j-1] = textView
                     }
                 }
-                tableRow.addView(textView,
-                    tableRow.layoutParams.width / (Constants.maxNumMultiplePoints + 1),
-                    tableRow.layoutParams.height)
+                tableRow.addView(textView, tableRow.layoutParams.width / (Constants.maxNumMultiplePoints + 1), tableRow.layoutParams.height)
             }
         }
+        multipleDistanceTableLayout.visibility = View.GONE //隱藏表格
     }
 
-    private fun initArrowView(){
+    private fun initArrowView(){ //給Gound模式用的
         Log.d(TAG, "initArrowView")
         arrow1UpLinearLayout = LinearLayout(this)
         arrow1UpLinearLayout.orientation = LinearLayout.VERTICAL
@@ -250,14 +247,10 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
 
     private fun initRenderable() {
         Log.d(TAG, "initRenderable")
-        MaterialFactory.makeTransparentWithColor(
-            this,
-            arColor(Color.RED))
+        //球型紅色圓點
+        MaterialFactory.makeTransparentWithColor(this, arColor(Color.RED))
             .thenAccept { material: Material? ->
-                cubeRenderable = ShapeFactory.makeSphere(
-                    0.02f,
-                    Vector3.zero(),
-                    material)
+                cubeRenderable = ShapeFactory.makeSphere(0.02f, Vector3.zero(), material)
                 cubeRenderable!!.setShadowCaster(false)
                 cubeRenderable!!.setShadowReceiver(false)
             }
@@ -269,6 +262,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
                 return@exceptionally null
             }
 
+        //普通的，可以顯示文字
         ViewRenderable
             .builder()
             .setView(this, R.layout.distance_text_layout)
@@ -286,6 +280,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
                 return@exceptionally null
             }
 
+        //以下都是Gound模式用的
         ViewRenderable
             .builder()
             .setView(this, arrow1UpLinearLayout)
@@ -355,36 +350,34 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             }
     }
 
-    private fun configureSpinner(){
+    private fun configureSpinner(){ //選擇模式
         Log.d(TAG, "configureSpinner")
-        distanceMode = distanceModeArrayList[2]
         distanceModeSpinner = findViewById(R.id.distance_mode_spinner)
         val distanceModeAdapter = ArrayAdapter(
             applicationContext,
             android.R.layout.simple_spinner_item,
-            distanceModeArrayList
+            distanceModeArrayList //顯示的模式陣列
         )
         distanceModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
         distanceModeSpinner.adapter = distanceModeAdapter
-        distanceModeSpinner.setSelection(2)
+        distanceModeSpinner.setSelection(1) //選擇「兩點(1)」模式  // 「多點(2)」模式
+
+        //選擇另一個模式
         distanceModeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
-            override fun onItemSelected(parent: AdapterView<*>?,
-                                        view: View?,
-                                        position: Int,
-                                        id: Long) {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val spinnerParent = parent as Spinner
                 distanceMode = spinnerParent.selectedItem as String
-                clearAllAnchors()
-                setMode()
-                toastMode()
-                if (distanceMode == distanceModeArrayList[2]){
+                clearAllAnchors() //清除所有點
+                setMode() //顯示模式文字
+//                toastMode() //Toast模式文字
+                if (distanceMode == distanceModeArrayList[2]){ //多點模式
                     val layoutParams = multipleDistanceTableLayout.layoutParams
                     layoutParams.height = Constants.multipleDistanceTableHeight
                     multipleDistanceTableLayout.layoutParams = layoutParams
-                    initDistanceTable()
+                    initDistanceTable() //顯示距離表格
                 }
-                else{
+                else{ //不是多點模式，高度設為0
                     val layoutParams = multipleDistanceTableLayout.layoutParams
                     layoutParams.height = 0
                     multipleDistanceTableLayout.layoutParams = layoutParams
@@ -394,28 +387,25 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 clearAllAnchors()
                 setMode()
-                toastMode()
+//                toastMode()
             }
         }
     }
 
-    private fun setMode(){
+    private fun setMode(){ //顯示模式文字
         Log.d(TAG, "setMode")
         distanceModeTextView!!.text = distanceMode
     }
 
-    private fun clearButton(){
+    private fun clearButton(){ //點擊「清除」按鈕
         Log.d(TAG, "clearButton")
         clearButton = findViewById(R.id.clearButton)
-        clearButton.setOnClickListener(object: View.OnClickListener {
-            override fun onClick(v: View?) {
-                clearAllAnchors()
-            }
-        })
+        clearButton.setOnClickListener({ clearAllAnchors() }) //清除所有圓點
     }
 
-    private fun clearAllAnchors(){
+    private fun clearAllAnchors(){ //清除所有圓點
         Log.d(TAG, "clearAllAnchors")
+
         placedAnchors.clear()
         for (anchorNode in placedAnchorNodes){
             arFragment!!.arSceneView.scene.removeChild(anchorNode)
@@ -424,6 +414,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             anchorNode.setParent(null)
         }
         placedAnchorNodes.clear()
+
         midAnchors.clear()
         for ((k,anchorNode) in midAnchorNodes){
             arFragment!!.arSceneView.scene.removeChild(anchorNode)
@@ -432,6 +423,8 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             anchorNode.setParent(null)
         }
         midAnchorNodes.clear()
+
+        //初始化距離表格
         for (i in 0 until Constants.maxNumMultiplePoints){
             for (j in 0 until Constants.maxNumMultiplePoints){
                 if (multipleDistances[i][j] != null){
@@ -439,6 +432,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
                 }
             }
         }
+
         fromGroundNodes.clear()
     }
 
@@ -552,64 +546,75 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         transformableNode.select()
     }
 
-    private fun placeAnchor(hitResult: HitResult,
-                            renderable: Renderable){
+    private fun placeAnchor(hitResult: HitResult, renderable: Renderable){ //放置圓點
         Log.d(TAG, "placeAnchor")
-        val anchor = hitResult.createAnchor()
+        val anchor = hitResult.createAnchor() //要放的位置(一個圓型的範圍)
         placedAnchors.add(anchor)
 
+        //在anchor的位置放上node
         val anchorNode = AnchorNode(anchor).apply {
             isSmoothed = true
             setParent(arFragment!!.arSceneView.scene)
         }
-        placedAnchorNodes.add(anchorNode)
+        placedAnchorNodes.add(anchorNode) //儲存圓點
 
         val node = TransformableNode(arFragment!!.transformationSystem)
             .apply{
                 this.rotationController.isEnabled = false
                 this.scaleController.isEnabled = false
                 this.translationController.isEnabled = true
-                this.renderable = renderable
-                setParent(anchorNode)
+                this.renderable = renderable //圓點的造型
+                setParent(anchorNode) //顯示圓點的造型
             }
 
-        arFragment!!.arSceneView.scene.addOnUpdateListener(this)
-        arFragment!!.arSceneView.scene.addChild(anchorNode)
-        node.select()
+        arFragment!!.arSceneView.scene.addOnUpdateListener(this) //更新頁面(計算距離)
+        arFragment!!.arSceneView.scene.addChild(anchorNode) //前面anchorNode已經setParent了，不知道為什麼這裡還要再一次
+        node.select() //和上面那行總是一對出現
     }
 
 
     private fun tapDistanceOf2Points(hitResult: HitResult){
         Log.d(TAG, "tapDistanceOf2Points")
-        if (placedAnchorNodes.size == 0){
-            placeAnchor(hitResult, cubeRenderable!!)
-            //If you have 0 anchor, place one.
-        }
-        else if (placedAnchorNodes.size == 1){
-            placeAnchor(hitResult, cubeRenderable!!)
-            //If you already have 1, place another one with distance pop in the middle.
 
+        //If you have 0 anchor, place one.
+        if (placedAnchorNodes.size == 0){ //儲存的圓點數量為0
+            placeAnchor(hitResult, cubeRenderable!!) //放上紅色圓點
+        }
+        else if (placedAnchorNodes.size >= 1 && placedAnchorNodes.size < Constants.maxNumMultiplePoints){
+            //If you already have 1, place another one with distance pop in the middle.
+            placeAnchor(hitResult, cubeRenderable!!) //放上紅色圓點
+
+            //兩個圓點中間的位置
             val midPosition = floatArrayOf(
-                (placedAnchorNodes[0].worldPosition.x + placedAnchorNodes[1].worldPosition.x) / 2,
-                (placedAnchorNodes[0].worldPosition.y + placedAnchorNodes[1].worldPosition.y) / 2,
-                (placedAnchorNodes[0].worldPosition.z + placedAnchorNodes[1].worldPosition.z) / 2)
+                (placedAnchorNodes[placedAnchorNodes.size-2].worldPosition.x + placedAnchorNodes[placedAnchorNodes.size-1].worldPosition.x) / 2,
+                (placedAnchorNodes[placedAnchorNodes.size-2].worldPosition.y + placedAnchorNodes[placedAnchorNodes.size-1].worldPosition.y) / 2,
+                (placedAnchorNodes[placedAnchorNodes.size-2].worldPosition.z + placedAnchorNodes[placedAnchorNodes.size-1].worldPosition.z) / 2)
             val quaternion = floatArrayOf(0.0f,0.0f,0.0f,0.0f)
             val pose = Pose(midPosition, quaternion)
 
-            placeMidAnchor(pose, distanceCardViewRenderable!!)
-        }
+            //放上中間的圖形
+            ViewRenderable
+                .builder()
+                .setView(this, R.layout.distance_text_layout)
+                .build()
+                .thenAccept{
+                    it.isShadowReceiver = false
+                    it.isShadowCaster = false
+                    measureDistanceOf2Points(it)
+                    placeMidAnchor(pose, it, arrayOf(placedAnchorNodes.size-2, placedAnchorNodes.size-1))
+                }
+            }
         else {
             clearAllAnchors()
             placeAnchor(hitResult, cubeRenderable!!)
         }
     }
 
-    private fun placeMidAnchor(pose: Pose,
-                               renderable: Renderable,
-                               between: Array<Int> = arrayOf(0,1)){
+    private fun placeMidAnchor(pose: Pose, renderable: Renderable, between: Array<Int>){ //放上中間的圖形
         Log.d(TAG, "placeMidAnchor")
-        val midKey = "${between[0]}_${between[1]}"
-        val anchor = arFragment!!.arSceneView.session!!.createAnchor(pose)
+        val midKey = "${between[0]}_${between[1]}" //表示後面的位置是在哪兩個圓球之間的key
+
+        val anchor = arFragment!!.arSceneView.session!!.createAnchor(pose) //要放的位置(在pose的位置上)
         midAnchors.put(midKey, anchor)
 
         val anchorNode = AnchorNode(anchor).apply {
@@ -630,34 +635,21 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         arFragment!!.arSceneView.scene.addChild(anchorNode)
     }
 
-    private fun tapDistanceOfMultiplePoints(hitResult: HitResult){
+    private fun tapDistanceOfMultiplePoints(hitResult: HitResult){ //多點模式
         Log.d(TAG, "tapDistanceOfMultiplePoints")
-        if (placedAnchorNodes.size >= 2){ //Constants.maxNumMultiplePoints
+        if (placedAnchorNodes.size >= Constants.maxNumMultiplePoints){ //超過上限就把點清掉
             clearAllAnchors()
         }
         ViewRenderable
             .builder()
-            .setView(this, R.layout.point_text_layout)
+            .setView(this, R.layout.point_text_layout) //多點的圓點是普通的點(和距離的普通點不一樣)
             .build()
             .thenAccept{
                 it.isShadowReceiver = false
                 it.isShadowCaster = false
-//                pointTextView = it.getView() as TextView
-//                pointTextView.setText(placedAnchors.size.toString())
-//                placeAnchor(hitResult, it)
-                placeAnchor(hitResult, cubeRenderable!!)
-
-                if (placedAnchorNodes.size >= 2) {
-                    val midPosition = floatArrayOf(
-                        (placedAnchorNodes[0].worldPosition.x + placedAnchorNodes[1].worldPosition.x) / 2,
-                        (placedAnchorNodes[0].worldPosition.y + placedAnchorNodes[1].worldPosition.y) / 2,
-                        (placedAnchorNodes[0].worldPosition.z + placedAnchorNodes[1].worldPosition.z) / 2
-                    )
-                    val quaternion = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
-                    val pose = Pose(midPosition, quaternion)
-
-                    placeMidAnchor(pose, distanceCardViewRenderable!!)
-                }
+                pointTextView = it.getView() as TextView
+                pointTextView.setText(placedAnchors.size.toString())
+                placeAnchor(hitResult, it) //把這裡的普通點放上去
             }
             .exceptionally {
                 val builder = AlertDialog.Builder(this)
@@ -677,10 +669,10 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
                 measureDistanceFromCamera()
             }
             distanceModeArrayList[1] -> {
-                measureDistanceOf2Points()
+                measureDistanceOf2Points(distanceCardViewRenderable!!) //兩個點之間的普通點顯示距離
             }
             distanceModeArrayList[2] -> {
-                measureMultipleDistances()
+                measureMultipleDistances() //距離表格
             }
             distanceModeArrayList[3] -> {
                 measureDistanceFromGround()
@@ -709,41 +701,51 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             val distanceMeter = calculateDistance(
                 placedAnchorNodes[0].worldPosition,
                 frame!!.camera.pose)
-            measureDistanceOf2Points(distanceMeter)
+            measureDistanceOf2Points(distanceMeter, distanceCardViewRenderable!!)
         }
     }
 
-    private fun measureDistanceOf2Points(){
+    private fun measureDistanceOf2Points(renderable: ViewRenderable){
         Log.d(TAG, "measureDistanceOf2Points")
-        if (placedAnchorNodes.size == 2) {
+//        if (placedAnchorNodes.size == 2) {
+//            //計算兩個點之間的距離
+//            val distanceMeter = calculateDistance(
+//                placedAnchorNodes[0].worldPosition,
+//                placedAnchorNodes[1].worldPosition)
+//            measureDistanceOf2Points(distanceMeter) //顯示距離文字
+//        }
+        if (placedAnchorNodes.size >= 2) {
+            //計算兩個點之間的距離
             val distanceMeter = calculateDistance(
-                placedAnchorNodes[0].worldPosition,
-                placedAnchorNodes[1].worldPosition)
-            measureDistanceOf2Points(distanceMeter)
+                placedAnchorNodes[placedAnchorNodes.size-2].worldPosition,
+                placedAnchorNodes[placedAnchorNodes.size-1].worldPosition)
+            val distanceCM = changeUnit(distanceMeter, "cm")
+            val distanceCMFloor = "%.2f".format(distanceCM)
+            multipleDistances[placedAnchorNodes.size-2][placedAnchorNodes.size-1]!!.setText(distanceCMFloor)
+            measureDistanceOf2Points(distanceMeter, renderable) //顯示距離文字
         }
     }
 
-    private fun measureDistanceOf2Points(distanceMeter: Float){
+    private fun measureDistanceOf2Points(distanceMeter: Float, renderable: ViewRenderable){ //將普通點 加上距離文字
         Log.d(TAG, "measureDistanceOf2Points(distanceMeter)")
         val distanceTextCM = makeDistanceTextWithCM(distanceMeter)
-        val textView = (distanceCardViewRenderable!!.view as LinearLayout)
-            .findViewById<TextView>(R.id.distanceCard)
+        val textView = (renderable.view as LinearLayout).findViewById<TextView>(R.id.distanceCard)
         textView.text = distanceTextCM
         Log.d(TAG, "distance: ${distanceTextCM}")
     }
 
-    private fun measureMultipleDistances(){
+    private fun measureMultipleDistances(){ //顯示距離表格
         Log.d(TAG, "measureMultipleDistances")
         if (placedAnchorNodes.size > 1){
             for (i in 0 until placedAnchorNodes.size){
-                for (j in i+1 until placedAnchorNodes.size){
+                for (j in i+1 until placedAnchorNodes.size){ //只處理對角線以上的值
                     val distanceMeter = calculateDistance(
                         placedAnchorNodes[i].worldPosition,
                         placedAnchorNodes[j].worldPosition)
                     val distanceCM = changeUnit(distanceMeter, "cm")
                     val distanceCMFloor = "%.2f".format(distanceCM)
                     multipleDistances[i][j]!!.setText(distanceCMFloor)
-                    multipleDistances[j][i]!!.setText(distanceCMFloor)
+                    multipleDistances[j][i]!!.setText(distanceCMFloor) //對角線另一半的值
                 }
             }
         }
@@ -848,33 +850,32 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
         }
     }
 
-    private fun createDir() {
+    private fun createDir() { //產生路徑(包括圖片地區資料夾)
         val imageFloder = File(myDir+imageFloderPath)
         if(!imageFloder.isDirectory) imageFloder.mkdirs()
     }
 
-    private fun generateFilename(): String {
+    private fun generateFilename(): String { //圖片名稱(路徑+地點_編號.jpg)
         val filename = "/"+item!!.title+"_"+item!!.data.size+".jpg"
         return myDir+imageFloderPath+filename
     }
 
-    private fun saveBitmapToDisk(bitmap: Bitmap, filepath: String) {
+    private fun saveBitmapToDisk(bitmap: Bitmap, filepath: String) { //將圖片儲存至手機
         val file = File(filepath)
         try {
             Log.d(TAG, "file path: "+ filepath)
-
-            if(file.isFile) file.delete()
+            if(file.isFile) file.delete() //刪掉原本的圖片(因為無法直接覆蓋)
 
             val bStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bStream)
-            val byteArray = bStream.toByteArray()
-            file.writeBytes(byteArray)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bStream) //將bipmap轉成圖片
+            val byteArray = bStream.toByteArray() //將圖片轉成010101
+            file.writeBytes(byteArray) //寫入檔案
         } catch (e: Exception) {
             Log.e(TAG, "create new file", e)
         }
     }
 
-    private fun backToMain() {
+    private fun backToMain() { //回到Main，把data都傳回去
         Log.d(TAG, "backToMain")
         val intent = Intent(this, MainActivity::class.java)
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)

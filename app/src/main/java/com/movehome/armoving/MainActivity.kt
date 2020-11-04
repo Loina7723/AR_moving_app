@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -14,6 +13,8 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import com.movehome.armoving.model.CardListData
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
     private var fragmentParent: FragmentParent? = null
@@ -29,6 +30,15 @@ class MainActivity : AppCompatActivity() {
         if(bundle != null){
             items = bundle.getParcelableArrayList<CardListData>("items")!!
             position = bundle.getInt("position")
+
+            var total: Float= 0f
+            for(item in items){
+                for(furniture in item.data){
+                    if(furniture.card_volume != null) total = total + furniture.card_volume.toFloat()
+                }
+            }
+            val totalFloor = "%.2f".format(total/1000000)
+            total_M.text = "總體積 "+totalFloor+" m²"
         }
         else items = ArrayList()
 
@@ -82,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         val buttonDone = findViewById<Button>(R.id.done_btn_main)
         buttonDone.setOnClickListener{
             val intent = Intent(this, IntroActivity::class.java)
+            intent.putExtras(bundle!!)
             startActivity(intent)
         }
     }

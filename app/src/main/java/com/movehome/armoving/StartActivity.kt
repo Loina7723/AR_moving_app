@@ -9,6 +9,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import com.movehome.armoving.helper.SessionManager
+import com.movehome.armoving.model.CardListData
 
 class StartActivity : AppCompatActivity() {
     private var items: ArrayList<CardListData> = ArrayList()
@@ -39,6 +41,8 @@ class StartActivity : AppCompatActivity() {
         setRoomBtn(bathBtn)
         setRoomBtn(readingBtn)
 
+
+
         addButton.setOnClickListener{
             val newRoom: String = etMessage?.text.toString()
             if(newRoom.trim().isNotEmpty()) {
@@ -65,7 +69,7 @@ class StartActivity : AppCompatActivity() {
             Log.d(TAG, room.text.toString()+" exist")
             room.setBackgroundResource(R.drawable.btn_round_corner_gray)
             room.setTextColor(Color.parseColor("#D5D5D5"))
-            return
+//            return
         }
         room.setOnClickListener { setRoomClick(room.text.toString()) }
     }
