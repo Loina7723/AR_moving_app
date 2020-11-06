@@ -26,15 +26,15 @@ class MainActivity : AppCompatActivity() {
 
         val items: ArrayList<CardListData>
         val bundle = intent.extras
-        var position: Int? = null
+        var mPosition: Int? = null
         if(bundle != null){
-            items = bundle.getParcelableArrayList<CardListData>("items")!!
-            position = bundle.getInt("position")
+            items = bundle.getParcelableArrayList("items")!!
+            mPosition = bundle.getInt("position")
 
-            var total: Float= 0f
+            var total = 0f
             for(item in items){
                 for(furniture in item.data){
-                    if(furniture.card_volume != null) total = total + furniture.card_volume.toFloat()
+                    if(furniture.card_volume != null) total += furniture.card_volume.toFloat()
                 }
             }
             val totalFloor = "%.2f".format(total/1000000)
@@ -52,11 +52,8 @@ class MainActivity : AppCompatActivity() {
 
         val tabLayout = findViewById<TabLayout>(R.id.tabLayout_main)
         tabLayout.tabMode = TabLayout.MODE_SCROLLABLE
-        TabLayoutMediator(tabLayout, viewPager, object : TabLayoutMediator.TabConfigurationStrategy {
-            override fun onConfigureTab(tab: TabLayout.Tab, position: Int) {
-                tab.text = items[position].title
-            }
-        }).attach()
+        TabLayoutMediator(tabLayout, viewPager
+        ) { tab, position -> tab.text = items[position].title }.attach()
 
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
@@ -71,7 +68,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-        if (position != null) viewPager.currentItem = position
+        if (mPosition != null) viewPager.currentItem = mPosition
 
         // new room
         val addRoomBtn = findViewById<Button>(R.id.addRoom_btn_main)
@@ -84,9 +81,7 @@ class MainActivity : AppCompatActivity() {
 
 
         val page  = "page"
-        if (page != "") {
-            fragmentParent!!.addPage(page + "")
-        }
+        if (page != "") { fragmentParent!!.addPage(page + "") }
 
         //next activity
         val buttonDone = findViewById<Button>(R.id.done_btn_main)
@@ -98,7 +93,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val iDs: Unit
-        private get() {
+        get() {
 //            buttonAddPage = findViewById<View>(R.id.buttonAddPage) as Button
             fragmentParent = this.supportFragmentManager.findFragmentById(R.id.fragmentParent) as FragmentParent
 //            textView = findViewById<View>(R.id.editTextPageName) as TextView

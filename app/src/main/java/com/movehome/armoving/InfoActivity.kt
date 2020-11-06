@@ -23,7 +23,7 @@ class InfoActivity : AppCompatActivity() {
     var floor = arrayOf("1", "2", "3", "4", "5樓以上")
     var currentFloor: String? = null
     var spinner: Spinner? = null
-    var elevator: String? = null
+    var elevator: Int? = null
     var _nameText: EditText? = null
     var _addressOut: EditText? = null
     var _addressIn: EditText? = null
@@ -33,6 +33,7 @@ class InfoActivity : AppCompatActivity() {
     var bundle: Bundle? = null
 
     var token: String? = null
+    var currentRoomId: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,8 +55,8 @@ class InfoActivity : AppCompatActivity() {
         option_rg.setOnCheckedChangeListener(
             RadioGroup.OnCheckedChangeListener { group, checkedId ->
                 val radio: RadioButton = findViewById(checkedId)
-                if(radio.text.toString().equals("是")) elevator = "true"
-                else elevator = "false"
+                if(radio.text.toString().equals("是")) elevator = 1
+                else elevator = 0
                 Toast.makeText(
                     applicationContext, " 您選擇了 : ${radio.text}",
                     Toast.LENGTH_SHORT
@@ -117,7 +118,7 @@ class InfoActivity : AppCompatActivity() {
             .add("addrOut", addrOut)
             .add("addrIn", addrIn)
             .add("floor", currentFloor!!)
-//            .add("if_elev", elevator!!)
+            .add("if_elev", elevator.toString())
             .build()
 
         val server_url = "http://140.117.71.79:8000/api"
@@ -234,11 +235,11 @@ class InfoActivity : AppCompatActivity() {
             addRoom(item.title)
             for(i in 0..item.data.size-1){
                 val furniture = item.data[i]
-                addFurniture(furniture.card_name!!, furniture.card_volume!!, i.toString())
+                addFurniture(furniture.card_name!!, furniture.card_volume!!)
             }
         }
 
-        startActivity(Intent(this, ThanksActivity::class.java))
+        onSuccess()
     }
 
     fun addRoom(rName: String) {
@@ -264,13 +265,19 @@ class InfoActivity : AppCompatActivity() {
             override fun onResponse(call: Call, response: Response) {
                 val responseData = response.body?.string()
                 Log.i(TAG, "responseData of room: "+responseData)
+
+                val responseObj = JSONObject(responseData)
+                Log.i(TAG, "responseObj of room: "+responseObj)
+
+                val room = responseObj.getJSONObject("room")
+                currentRoomId = room.getInt("id")
             }
         });
     }
 
-    fun addFurniture(fName: String, fvol: String, room_id: String) {
+    fun addFurniture(fName: String, fvol: String) {
         val body = FormBody.Builder()
-            .add("rooms_id", room_id)
+            .add("id", currentRoomId.toString()) //房間ID
             .add("fName", fName)
             .add("fvol", fvol)
             .add("token", token!!)
@@ -292,9 +299,15 @@ class InfoActivity : AppCompatActivity() {
 
             override fun onResponse(call: Call, response: Response) {
                 val responseData = response.body?.string()
-                Log.i(TAG, "responseData: "+responseData)
+                Log.i(TAG, "responseData of furniure: "+responseData)
             }
         });
+    }
+
+    fun onSuccess() {
+        val intent = Intent(this, ThanksActivity::class.java)
+        intent.putExtras(bundle!!)
+        startActivity(intent)
     }
 }
 

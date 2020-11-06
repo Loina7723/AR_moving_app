@@ -30,7 +30,7 @@ class StartActivity : AppCompatActivity() {
 
         val data = intent.extras
         if(data != null) {
-            items = data.getParcelableArrayList<CardListData>("items")!!
+            items = data.getParcelableArrayList("items")!!
             for(item in items){
                 Log.d(TAG, "tab: "+item.title)
             }
