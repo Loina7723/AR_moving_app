@@ -35,6 +35,8 @@ class InfoActivity : AppCompatActivity() {
     var token: String? = null
     var currentRoomId: Int? = null
 
+    var lock = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_info)
@@ -177,7 +179,7 @@ class InfoActivity : AppCompatActivity() {
     }
 
     fun onFailed() {
-        Toast.makeText(this, "資料儲存失敗", Toast.LENGTH_LONG).show()
+        Toast.makeText(this@InfoActivity, "資料儲存失敗", Toast.LENGTH_LONG).show()
 
         runOnUiThread({ _OKButton!!.isEnabled = true })
     }
@@ -232,7 +234,12 @@ class InfoActivity : AppCompatActivity() {
     fun createfurnitures(){
         val items = bundle!!.getParcelableArrayList<CardListData>("items")!!
         for(item in items) {
+            lock = true
             addRoom(item.title)
+            var lock_counter = 0
+            while (lock) {
+                if(lock_counter++%1000000 == 0) Log.d(TAG, "wait for lock...")
+            }
             for(i in 0..item.data.size-1){
                 val furniture = item.data[i]
                 addFurniture(furniture.card_name!!, furniture.card_volume!!)
@@ -271,6 +278,9 @@ class InfoActivity : AppCompatActivity() {
 
                 val room = responseObj.getJSONObject("room")
                 currentRoomId = room.getInt("id")
+                Log.i(TAG, "room id: "+currentRoomId)
+
+                lock = false
             }
         });
     }

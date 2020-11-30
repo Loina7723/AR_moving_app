@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             val totalFloor = "%.2f".format(total/1000000)
-            total_M.text = "總體積 "+totalFloor+" m²"
+            total_M.text = "總體積 "+totalFloor+" m³"
         }
         else items = ArrayList()
 

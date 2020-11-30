@@ -128,7 +128,7 @@ class Measurement : AppCompatActivity(), Scene.OnUpdateListener {
             Log.d(TAG, "volume = "+volume)
 
 
-            item!!.data.add(CardData(filepath, item!!.title+" "+item!!.data.size, volume.toString()))
+            item!!.data.add(CardData(filepath, item!!.title+"家具"+(item!!.data.size+1), volume.toString()))
             Log.d(TAG, "item.data("+ item!!.data.size+"): "+item!!.data[item!!.data.size-1])
 
             backToMain()

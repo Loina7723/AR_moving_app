@@ -29,7 +29,7 @@ class RecyclerAdapter(private val mDataList: ArrayList<CardData>) : RecyclerView
             holder.img.setImageBitmap(bmp)
         }
         holder.name.text = mDataList[position].card_name
-        holder.volume.text = mDataList[position].card_volume + " cm²"
+        holder.volume.text = (mDataList[position].card_volume!!.toFloat()/1000000).toString() + " m³"
         holder.volumeEdit.text = Editable.Factory.getInstance().newEditable(mDataList[position].card_volume)
         holder.deleteBtn.setOnClickListener{
             mDataList.removeAt(position)
