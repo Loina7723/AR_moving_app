@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
             total_M.text = "總體積 "+totalFloor+" m³"
         }
         else items = ArrayList()
-
+//
         val adapter = LocalAdapter(this)
         for(item in items){
             val page = ViewFragment(this, item.data)
